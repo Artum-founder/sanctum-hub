@@ -3,7 +3,7 @@
  * Sanctum hub-oppstart
  * Temporary profiles (name, e-mail, 6-digit PIN) for practitioners filling in their hub onboarding.
  * No accounts, no PIN recovery. The admin exports the answers and deletes the profile.
- * Only Node built-ins, plus `pg` when a database address (SOL_DATABASE_URL or DATABASE_URL) is set.
+ * Only Node built-ins. Data lives in Supabase «sol» (schema tantric), reached the same way Sanctum does.
  */
 const http = require('http');
 const fs = require('fs');
@@ -308,7 +308,7 @@ route('POST', '/api/admin/logout', async (req, res) => {
 
 route('GET', '/api/admin/profiles', async (req, res) => {
   await requireAdmin(req);
-  json(res, 200, { profiles: await store.listUsers(), store: store.kind });
+  json(res, 200, { profiles: await store.listUsers(), store: store.kind, warning: store.warning || null });
 });
 
 const exportShape = u => ({
@@ -404,7 +404,7 @@ const server = http.createServer(async (req, res) => {
 (async () => {
   await store.init();
   if (store.kind === 'file' && process.env.REPLIT_DEPLOYMENT) {
-    console.warn('[sanctum-hub] Databaseadresse mangler (SOL_DATABASE_URL): svarene lagres i en fil som kan forsvinne.');
+    console.warn('[sanctum-hub] SUPABASE_URL og SUPABASE_SERVICE_ROLE_KEY mangler: svarene lagres i en fil som kan forsvinne.');
   }
   if (!ADMIN_KEY) console.warn('[sanctum-hub] ADMIN_KEY er ikke satt: /admin er av.');
   setInterval(() => store.purgeExpiredSessions().catch(() => {}), 60 * 60 * 1000).unref();

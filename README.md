@@ -8,32 +8,32 @@ Onboarding for coacher og utøvere som skal få sin egen hub i Sanctum. De lager
 - Forhåndsvisning av huben som oppdateres mens de skriver.
 - Admin på `/admin`: se alle profiler, last ned (JSON), kopier som tekst, slett.
 
-## Database: Supabase «sol»
+## Database: Supabase «sol», som Sanctum
 
-Svarene lagres i Supabase-prosjektet **sol**, i en egen avdeling (schema) som heter `sanctum_hub`. Den ligger ved siden av `tantric` (Sanctum-appen), `openground` og `selvskaper`, men er helt adskilt fra dem.
+Huben kobler seg til Supabase på samme måte som Sanctum-appen: med Supabase-adressen og service role-nøkkelen, gjennom Supabase sitt API. Svarene ligger i schemaet `tantric` i prosjektet **sol**, ved siden av Sanctums egne tabeller:
 
-- Tabellene `sanctum_hub.hub_users` og `sanctum_hub.hub_sessions` er allerede laget. Appen lager dem også selv hvis de mangler.
-- Row level security er på uten regler, og Supabase-rollene `anon` og `authenticated` har ingen tilgang. Svarene kan altså ikke leses gjennom Supabase sitt offentlige API, bare gjennom denne serveren.
-- Svarene ser du i Supabase under Table Editor, schema `sanctum_hub`, eller på `/admin` i appen.
+- `tantric.hub_onboarding_profiles`: én midlertidig profil per coach med svarene.
+- `tantric.hub_onboarding_sessions`: innloggingene.
+
+Tabellene er allerede laget (SQL-en ligger i `supabase/schema.sql`). Row level security er på uten regler, og `anon` og `authenticated` har ingen tilgang. Bare serveren, med service role-nøkkelen, når svarene. Nøkkelen sendes aldri til nettleseren.
+
+Svarene ser du på `/admin` i appen, eller i Supabase under Table Editor, schema `tantric`.
 
 ## Kjøre på Replit
 
 Koden lages i GitHub, og Replit er basen nettsiden kjører fra.
 
-1. **Databaseadressen til «sol»** (gjøres én gang, og kan brukes av alle SOL-apper):
-   I Supabase: åpne prosjektet sol, trykk **Connect**, velg fanen **Direct** (Connection string), Type **URI** og Method **Session pooler**. Kopier adressen og bytt ut `[YOUR-PASSWORD]` med databasepassordet. Bruk Session pooler, ikke Direct connection, fordi den direkte adressen ikke virker fra Replit.
-   Lagre den i Replit som en **Account secret** med navnet `SOL_DATABASE_URL`. Da kan hver SOL-app koble den til med et klikk, i stedet for at du limer den inn i hver app.
-2. **Importer**: Create App, Import from GitHub, og velg `sanctum-hub`.
-3. **Secrets i appen** (Tools, Secrets):
-   - Koble til account-secreten `SOL_DATABASE_URL`. (Eller lim inn adressen som `DATABASE_URL` direkte i appen.)
+1. **Importer**: Create App, Import from GitHub, og velg `sanctum-hub`.
+2. **Secrets** (Tools, Secrets), de samme som i Sanctum-appen (`tantric-community-hub`) på Replit:
+   - `NEXT_PUBLIC_SUPABASE_URL` (eller `SUPABASE_URL`)
+   - `SUPABASE_SERVICE_ROLE_KEY`
    - `ADMIN_KEY`: en lang, tilfeldig nøkkel. Den bruker du for å logge inn på `/admin`.
-   - Valgfritt: `CONTACT_NAME` og `CONTACT_EMAIL` (navnet og e-posten som vises i skjemaet, standard er Peder og peder@artum.no), og `DB_SCHEMA` (standard `sanctum_hub`).
-4. **Run**. I konsollen skal det stå `lagring: postgres`. Åpne gjerne appen i en egen fane. Innlogging i Replits forhåndsvisning kan bli blokkert i noen nettlesere (Safari blokkerer informasjonskapsler i innebygde vinduer).
-5. **Publish** (Autoscale) når du vil dele lenken.
+   - Valgfritt: `CONTACT_NAME` og `CONTACT_EMAIL` (navnet og e-posten som vises i skjemaet, standard er Peder og peder@artum.no).
+3. **Run**. I konsollen skal det stå `lagring: supabase`. Er noe feil, står det en forklaring rett under, og den vises også øverst på `/admin`.
+   Åpne gjerne appen i en egen fane. Innlogging i Replits forhåndsvisning kan bli blokkert i noen nettlesere (Safari blokkerer informasjonskapsler i innebygde vinduer).
+4. **Publish** (Autoscale) når du vil dele lenken.
 
-Om sertifikatet: Supabase bruker sitt eget sertifikat. Når adressen er en Supabase-adresse, krypterer appen forbindelsen uten å sjekke sertifikatet. Vil du at det også skal sjekkes, last ned sertifikatet i Supabase under Database settings, SSL Configuration, og lim inn hele innholdet som `DATABASE_CA`. `DATABASE_SSL` (`require` eller `no-verify`) overstyrer dette.
-
-Uten databaseadresse lagres svarene i en fil, og den kan forsvinne når appen publiseres eller starter på nytt. Admin-siden viser en advarsel så lenge det er sånn.
+Uten Supabase-secretene lagres svarene i en fil, og den kan forsvinne når appen publiseres eller starter på nytt. Admin-siden viser en advarsel så lenge det er sånn.
 
 ## Kjøre lokalt
 
@@ -42,7 +42,7 @@ npm install
 ADMIN_KEY=en-lang-nokkel npm start
 ```
 
-Åpne http://localhost:3000. Uten databaseadresse lagres alt i `data/sanctum-hub.json`.
+Åpne http://localhost:3000. Uten Supabase-secretene lagres alt i `data/sanctum-hub.json`.
 
 ## Personvern og sikkerhet
 
@@ -56,8 +56,9 @@ ADMIN_KEY=en-lang-nokkel npm start
 ## Struktur
 
 ```
-server.js           HTTP-server og API (bare innebygde Node-moduler, pluss pg)
-src/store.js        Lagring: PostgreSQL med SOL_DATABASE_URL eller DATABASE_URL (schema sanctum_hub), ellers en JSON-fil
+server.js           HTTP-server og API (bare innebygde Node-moduler)
+src/store.js        Lagring: Supabase «sol» (schema tantric) via API-et, ellers en JSON-fil
+supabase/schema.sql Tabellene i Supabase
 src/security.js     PIN-hashing, økter og begrensning av forsøk
 public/index.html   Skjemaet
 public/app.js       Skjemaets logikk og forhåndsvisningen

@@ -4,7 +4,8 @@ const path = require('path');
 
 /*
  * Two stores with the same interface:
- *  - PgStore when DATABASE_URL is set (Supabase «sol», Replit's built-in PostgreSQL, Neon ...)
+ *  - SupabaseStore: the same connection Sanctum uses. The Supabase address and the service role key,
+ *    through Supabase's API, into the hub tables in the "tantric" schema of «sol».
  *  - FileStore otherwise, a JSON file for local testing. Not for published apps:
  *    a published Replit app does not keep files between restarts.
  */
@@ -133,54 +134,6 @@ class FileStore {
   }
 }
 
-// Tables live in their own schema (default "sanctum_hub"), next to the other SOL schemas
-// when the database is Supabase «sol», or alone in Replit's PostgreSQL.
-const schemaSql = S => `
-CREATE SCHEMA IF NOT EXISTS ${S};
-CREATE TABLE IF NOT EXISTS ${S}.hub_users (
-  id              TEXT PRIMARY KEY,
-  name            TEXT NOT NULL,
-  email           TEXT NOT NULL UNIQUE,
-  pin_hash        TEXT NOT NULL,
-  pin_salt        TEXT NOT NULL,
-  failed_attempts INTEGER NOT NULL DEFAULT 0,
-  locked_until    TIMESTAMPTZ,
-  answers         JSONB NOT NULL DEFAULT '{}'::jsonb,
-  step            INTEGER NOT NULL DEFAULT 0,
-  status          TEXT NOT NULL DEFAULT 'draft',
-  photo           TEXT,
-  consent_at      TIMESTAMPTZ,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  submitted_at    TIMESTAMPTZ
-);
-CREATE TABLE IF NOT EXISTS ${S}.hub_sessions (
-  token_hash TEXT PRIMARY KEY,
-  user_id    TEXT REFERENCES ${S}.hub_users(id) ON DELETE CASCADE,
-  role       TEXT NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS hub_sessions_user_idx ON ${S}.hub_sessions (user_id);
-`;
-
-// Keeps the tables away from Supabase's public API roles: row level security with no
-// policies, and no grants for anon/authenticated. Only this server's own login reaches them.
-const hardenSql = S => `
-ALTER TABLE ${S}.hub_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ${S}.hub_sessions ENABLE ROW LEVEL SECURITY;
-DO $$
-DECLARE r text;
-BEGIN
-  FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
-      EXECUTE format('REVOKE ALL ON SCHEMA %I FROM %I', '${S}', r);
-      EXECUTE format('REVOKE ALL ON ALL TABLES IN SCHEMA %I FROM %I', '${S}', r);
-    END IF;
-  END LOOP;
-END $$;
-`;
-
 const COLS = {
   name: 'name', email: 'email', pinHash: 'pin_hash', pinSalt: 'pin_salt', failedAttempts: 'failed_attempts',
   lockedUntil: 'locked_until', answers: 'answers', step: 'step', status: 'status', photo: 'photo',
@@ -197,65 +150,69 @@ function rowToUser(r) {
   };
 }
 
-// Connection settings. Supabase's pooler uses its own certificate authority. For a Supabase address
-// the connection is encrypted without checking the certificate, unless the certificate from the
-// Supabase dashboard is given in DATABASE_CA (then it is checked). DATABASE_SSL overrides this.
-// Either way sslmode is taken out of the URL so these settings apply.
-function pgConfig(url) {
-  const cfg = { connectionString: url, max: 5, idleTimeoutMillis: 30000, connectionTimeoutMillis: 10000 };
-  const ca = (process.env.DATABASE_CA || '').trim();
-  let mode = (process.env.DATABASE_SSL || '').trim().toLowerCase();
-  if (!ca && !mode) {
-    try { if (/\.supabase\.(co|com)$/i.test(new URL(url).hostname)) mode = 'no-verify'; } catch (e) { /* not a URL */ }
+const PROFILES = 'hub_onboarding_profiles';
+const SESSIONS = 'hub_onboarding_sessions';
+const LIST_COLS = 'id,name,email,answers,step,status,has_photo,created_at,updated_at,submitted_at';
+const eq = v => encodeURIComponent(String(v));
+
+// Talks to Supabase's REST API (PostgREST) with the service role key, like Sanctum's server does.
+// The key never leaves the server. The tables have row level security with no policies and no grants
+// for anon/authenticated, so only this key reaches them.
+class SupabaseStore {
+  constructor({ url, key, schema }) {
+    this.base = url.replace(/\/+$/, '') + '/rest/v1';
+    this.key = key;
+    this.schema = schema;
+    this.kind = 'supabase';
+    this.warning = null;
   }
-  if (ca || mode === 'no-verify' || mode === 'require') {
+
+  async req(method, table, query, body, prefer) {
+    const headers = { apikey: this.key, Accept: 'application/json' };
+    // Legacy keys are JWTs and go in Authorization too; new sb_secret_ keys only go in apikey.
+    if (!this.key.startsWith('sb_')) headers.Authorization = `Bearer ${this.key}`;
+    if (method === 'GET') headers['Accept-Profile'] = this.schema;
+    else { headers['Content-Profile'] = this.schema; headers['Content-Type'] = 'application/json'; }
+    if (prefer) headers.Prefer = prefer;
+    let res;
     try {
-      const u = new URL(url);
-      ['sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'uselibpqcompat'].forEach(k => u.searchParams.delete(k));
-      cfg.connectionString = u.toString();
-    } catch (e) { /* keep the URL as given */ }
-    cfg.ssl = ca ? { ca: ca.replace(/\\n/g, '\n'), rejectUnauthorized: true } : { rejectUnauthorized: mode !== 'no-verify' };
-  }
-  return cfg;
-}
-
-function schemaName() {
-  const s = (process.env.DB_SCHEMA || 'sanctum_hub').trim().toLowerCase();
-  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(s)) throw new Error(`DB_SCHEMA "${s}" er ikke et gyldig navn (bruk små bokstaver, tall og _).`);
-  return s;
-}
-
-class PgStore {
-  constructor(url) {
-    const { Pool } = require('pg');
-    this.schema = schemaName();
-    this.U = `${this.schema}.hub_users`;
-    this.S = `${this.schema}.hub_sessions`;
-    this.pool = new Pool(pgConfig(url));
-    this.pool.on('error', err => console.error('[store] postgres', err.message));
-    this.kind = 'postgres';
-  }
-
-  async init() {
-    await this.pool.query(schemaSql(this.schema));
-    try {
-      await this.pool.query(hardenSql(this.schema));
+      res = await fetch(`${this.base}/${table}${query ? '?' + query : ''}`, {
+        method, headers, body: body === undefined ? undefined : JSON.stringify(body)
+      });
     } catch (e) {
-      console.warn(`[store] kunne ikke stramme inn tilgangen til ${this.schema} (${e.message}). Sjekk at RLS er på i Supabase.`);
+      throw Object.assign(new Error(`[supabase] ${method} ${table}: fikk ikke kontakt (${e.message})`), { status: 0 });
     }
+    const text = await res.text();
+    let data = null;
+    if (text) { try { data = JSON.parse(text); } catch (e) { data = text; } }
+    if (!res.ok) {
+      const msg = (data && (data.message || data.error)) || text || res.statusText;
+      throw Object.assign(new Error(`[supabase] ${method} ${table}: ${res.status} ${msg}`), { status: res.status, code: data && data.code });
+    }
+    return data;
   }
 
-  q(sql, params) {
-    return this.pool.query(sql, params);
+  // Checks the connection at startup and says plainly what is wrong, without stopping the site.
+  async init() {
+    try {
+      await this.req('GET', PROFILES, 'select=id&limit=1');
+      this.warning = null;
+    } catch (e) {
+      let hint = 'Sjekk SUPABASE_URL og SUPABASE_SERVICE_ROLE_KEY.';
+      if (e.status === 401 || e.status === 403) hint = 'Nøkkelen ble avvist. Bruk service role-nøkkelen (SUPABASE_SERVICE_ROLE_KEY), ikke anon-nøkkelen.';
+      else if (e.code === 'PGRST106') hint = `Schemaet "${this.schema}" er ikke åpnet i Supabase sitt API.`;
+      else if (e.code === 'PGRST205' || e.code === '42P01' || e.status === 404) hint = `Tabellene mangler i "${this.schema}". Kjør supabase/schema.sql i Supabase sin SQL Editor.`;
+      this.warning = `Får ikke kontakt med databasen i Supabase. ${hint}`;
+      console.error(`[store] ${e.message}\n[store] ${this.warning}`);
+    }
   }
 
   async createUser(u) {
     try {
-      const { rows } = await this.q(
-        `INSERT INTO ${this.U} (id, name, email, pin_hash, pin_salt, answers, consent_at)
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7) RETURNING *`,
-        [u.id, u.name, u.email, u.pinHash, u.pinSalt, JSON.stringify(u.answers || {}), u.consentAt || null]
-      );
+      const rows = await this.req('POST', PROFILES, 'select=*', {
+        id: u.id, name: u.name, email: u.email, pin_hash: u.pinHash, pin_salt: u.pinSalt,
+        answers: u.answers || {}, consent_at: u.consentAt || null
+      }, 'return=representation');
       return rowToUser(rows[0]);
     } catch (e) {
       if (e.code === '23505') throw Object.assign(new Error('exists'), { code: 'EXISTS' });
@@ -264,83 +221,75 @@ class PgStore {
   }
 
   async findUserByEmail(email) {
-    const { rows } = await this.q(`SELECT * FROM ${this.U} WHERE email = $1`, [email]);
+    const rows = await this.req('GET', PROFILES, `select=*&email=eq.${eq(email)}&limit=1`);
     return rowToUser(rows[0]);
   }
 
   async getUser(id) {
-    const { rows } = await this.q(`SELECT * FROM ${this.U} WHERE id = $1`, [id]);
+    const rows = await this.req('GET', PROFILES, `select=*&id=eq.${eq(id)}&limit=1`);
     return rowToUser(rows[0]);
   }
 
   async updateUser(id, patch) {
-    const sets = [];
-    const params = [];
-    for (const [key, value] of Object.entries(patch)) {
-      const col = COLS[key];
-      if (!col) continue;
-      params.push(key === 'answers' ? JSON.stringify(value || {}) : value);
-      sets.push(`${col} = $${params.length}${key === 'answers' ? '::jsonb' : ''}`);
-    }
-    if (!sets.length) return this.getUser(id);
-    params.push(id);
-    const { rows } = await this.q(`UPDATE ${this.U} SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`, params);
+    const body = {};
+    for (const [key, value] of Object.entries(patch)) if (COLS[key]) body[COLS[key]] = value;
+    if (!Object.keys(body).length) return this.getUser(id);
+    const rows = await this.req('PATCH', PROFILES, `select=*&id=eq.${eq(id)}`, body, 'return=representation');
     return rowToUser(rows[0]);
   }
 
   async deleteUser(id) {
-    const { rowCount } = await this.q(`DELETE FROM ${this.U} WHERE id = $1`, [id]);
-    return rowCount > 0;
+    const rows = await this.req('DELETE', PROFILES, `select=id&id=eq.${eq(id)}`, undefined, 'return=representation');
+    return Array.isArray(rows) && rows.length > 0;
   }
 
   async listUsers() {
-    const { rows } = await this.q(
-      `SELECT id, name, email, answers, step, status, (photo IS NOT NULL) AS has_photo,
-              created_at, updated_at, submitted_at
-         FROM ${this.U} ORDER BY created_at DESC`
-    );
+    const rows = await this.req('GET', PROFILES, `select=${LIST_COLS}&order=created_at.desc`);
     return rows.map(r => publicListUser(rowToUser(r)));
   }
 
   async allUsersFull() {
-    const { rows } = await this.q(`SELECT * FROM ${this.U} ORDER BY created_at DESC`);
+    const rows = await this.req('GET', PROFILES, 'select=*&order=created_at.desc');
     return rows.map(rowToUser);
   }
 
   async createSession(s) {
-    await this.q(`INSERT INTO ${this.S} (token_hash, user_id, role, expires_at) VALUES ($1, $2, $3, $4)`,
-      [s.tokenHash, s.userId || null, s.role, s.expiresAt]);
+    await this.req('POST', SESSIONS, '', {
+      token_hash: s.tokenHash, user_id: s.userId || null, role: s.role, expires_at: s.expiresAt
+    }, 'return=minimal');
   }
 
   async getSession(tokenHash) {
-    const { rows } = await this.q(
-      `SELECT token_hash, user_id, role, expires_at FROM ${this.S} WHERE token_hash = $1 AND expires_at > now()`,
-      [tokenHash]
-    );
+    const rows = await this.req('GET', SESSIONS,
+      `select=token_hash,user_id,role,expires_at&token_hash=eq.${eq(tokenHash)}&expires_at=gt.${eq(nowIso())}&limit=1`);
     const r = rows[0];
     return r ? { tokenHash: r.token_hash, userId: r.user_id, role: r.role, expiresAt: iso(r.expires_at) } : null;
   }
 
   async deleteSession(tokenHash) {
-    await this.q(`DELETE FROM ${this.S} WHERE token_hash = $1`, [tokenHash]);
+    await this.req('DELETE', SESSIONS, `token_hash=eq.${eq(tokenHash)}`, undefined, 'return=minimal');
   }
 
   async purgeExpiredSessions() {
-    await this.q(`DELETE FROM ${this.S} WHERE expires_at <= now()`);
+    await this.req('DELETE', SESSIONS, `expires_at=lte.${eq(nowIso())}`, undefined, 'return=minimal');
   }
 }
 
-// SOL_DATABASE_URL is the shared address to Supabase «sol». Keep it as a Replit account secret and
-// link it to each SOL app; it wins over DATABASE_URL, which Replit's own database may set.
-function databaseUrl() {
-  return (process.env.SOL_DATABASE_URL || process.env.DATABASE_URL || '').trim();
+// The same secrets Sanctum uses on Replit. SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL, and the
+// server-only SUPABASE_SERVICE_ROLE_KEY (or a new sb_secret_ key in SUPABASE_SECRET_KEY).
+function supabaseConfig() {
+  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim();
+  const schema = (process.env.HUB_SCHEMA || 'tantric').trim().toLowerCase();
+  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(schema)) throw new Error(`HUB_SCHEMA "${schema}" er ikke et gyldig navn.`);
+  return url && key ? { url, key, schema } : null;
 }
 
 function createStore() {
-  const url = databaseUrl();
-  if (url) return new PgStore(url);
+  const cfg = supabaseConfig();
+  if (cfg) return new SupabaseStore(cfg);
   const file = process.env.DATA_FILE || path.join(__dirname, '..', 'data', 'sanctum-hub.json');
   return new FileStore(file);
 }
 
-module.exports = { createStore, FileStore, PgStore, schemaSql, hardenSql, pgConfig };
+module.exports = { createStore, FileStore, SupabaseStore, supabaseConfig };

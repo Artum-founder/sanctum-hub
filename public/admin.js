@@ -112,7 +112,9 @@ async function load() {
   try {
     const d = await api('GET', '/api/admin/profiles');
     list = d.profiles || [];
-    $('#storeNote').hidden = d.store !== 'file';
+    const note = d.warning || (d.store === 'file' ? 'Lagring: fil. Legg inn SUPABASE_URL og SUPABASE_SERVICE_ROLE_KEY (de samme som i Sanctum) før du deler lenken, ellers kan svarene forsvinne når appen publiseres eller starter på nytt.' : '');
+    $('#storeNote').textContent = note;
+    $('#storeNote').hidden = !note;
     document.body.dataset.auth = 'in';
     if (currentId && !list.some(p => p.id === currentId)) { currentId = null; current = null; renderDetail(); }
     renderList();
