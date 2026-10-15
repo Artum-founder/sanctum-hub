@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sanctum Hub Oppstart</title>
+<meta name="description" content="Lag din egen hub i Sanctum: profil, hjemmeside og klientrom i ett.">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f3ef">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2d2a26">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/fonts/cormorant/400.css">
+<link rel="stylesheet" href="/fonts/cormorant/500.css">
+<link rel="stylesheet" href="/fonts/cormorant/600.css">
+<link rel="stylesheet" href="/fonts/cormorant/400-italic.css">
+<link rel="stylesheet" href="/fonts/cormorant/500-italic.css">
+<link rel="stylesheet" href="/fonts/inter/400.css">
+<link rel="stylesheet" href="/fonts/inter/500.css">
+<link rel="stylesheet" href="/fonts/inter/600.css">
+<link rel="stylesheet" href="/app.css">
+<script src="/shared.js" defer></script>
+<script src="/app.js" defer></script>
+</head>
+<body data-auth="boot">
+
+<header class="topbar">
+  <div class="bar g">
+    <a class="logo" href="#top" aria-label="Sanctum, til toppen">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"/><circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="1" opacity=".5"><animate attributeName="r" values="12;13;12" dur="8s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/></circle><circle cx="20" cy="20" r="6" fill="currentColor" opacity=".8"><animate attributeName="r" values="6;6.8;6" dur="8s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/></circle><g fill="currentColor" opacity=".6"><path d="M20 2Q25 10 20 14Q15 10 20 2"/><path d="M38 20Q30 25 26 20Q30 15 38 20"/><path d="M20 38Q15 30 20 26Q25 30 20 38"/><path d="M2 20Q10 15 14 20Q10 25 2 20"/></g></svg>
+      <b>Sanctum</b>
+    </a>
+    <span class="bar-sub">Hub-oppstart</span>
+    <div class="who in-only">
+      <span class="save" id="save" role="status" aria-live="polite"></span>
+      <button type="button" class="logout" id="logoutBtn" aria-label="Logg ut"><span data-icon="logout"></span><span class="t">Logg ut</span></button>
+    </div>
+  </div>
+  <div class="segwrap g">
+    <div class="seg" id="seg" data-v="form" role="group" aria-label="Visning">
+      <span class="thumb" aria-hidden="true"></span>
+      <button type="button" data-view="form" aria-pressed="true">Svar på spørsmål</button>
+      <button type="button" data-view="profile" aria-pressed="false">Se huben din</button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- Signed out: what this is, plus create profile or log in -->
+  <section class="intro out-only">
+    <div class="aura" aria-hidden="true"><span class="orb a"></span><span class="orb b"></span><span class="orb c"></span></div>
+    <div class="intro-in g">
+      <div>
+        <p class="eyebrow anim" style="--d:60ms">Sanctum · Hub-oppstart for coacher</p>
+        <h1><span class="ln anim" style="--d:160ms">Fortell om deg selv.</span><span class="ln anim" style="--d:300ms"><em>Resten bygger vi.</em></span></h1>
+        <p class="lede anim" style="--d:440ms">En hub er ditt eget sted i Sanctum: profil, hjemmeside og klientrom i ett, laget for mobilen. Lag en midlertidig profil og svar på det du har lyst til, så setter <span data-cfg="contactName">Peder</span> opp en første versjon for deg. Du trenger ikke kunne noe teknisk.</p>
+        <div class="cta-row anim" style="--d:520ms">
+          <a class="btn-pri" href="#auth" data-jump="register">Lag profil<span data-icon="arrowR" class="go-wrap"></span></a>
+          <a class="btn-sec" href="#auth" data-jump="login">Logg inn</a>
+        </div>
+        <ul class="facts anim" style="--d:560ms">
+          <li><span data-icon="clock"></span>Ca. 15 minutter</li>
+          <li><span data-icon="check"></span>Lagres mens du skriver</li>
+          <li><span data-icon="skip"></span>Hopp over det du vil</li>
+          <li><span data-icon="eye"></span>Du bestemmer hva som vises</li>
+        </ul>
+        <ol class="how anim" style="--d:680ms">
+          <li><span class="n">1</span><span><strong>Lag en profil</strong><span class="t">Navn, e-post og en PIN-kode på 6 sifre. Ingen konto, ingen passord.</span></span></li>
+          <li><span class="n">2</span><span><strong>Svar i ditt tempo</strong><span class="t">Logg inn igjen når du vil, svarene ligger der.</span></span></li>
+          <li><span class="n">3</span><span><strong>Send inn</strong><span class="t"><span data-cfg="contactName">Peder</span> bygger huben din og sletter den midlertidige profilen etterpå.</span></span></li>
+        </ol>
+      </div>
+
+      <div class="auth anim" id="auth" style="--d:420ms">
+        <div class="seg" id="authSeg" data-v="register" role="tablist" aria-label="Lag profil eller logg inn">
+          <span class="thumb" aria-hidden="true"></span>
+          <button type="button" role="tab" data-tab="register" aria-selected="true" aria-controls="regForm">Lag profil</button>
+          <button type="button" role="tab" data-tab="login" aria-selected="false" aria-controls="loginForm">Logg inn</button>
+        </div>
+        <p class="auth-msg" id="authMsg" role="status" hidden></p>
+
+        <form id="regForm" novalidate>
+          <div>
+            <h2>Lag en midlertidig profil</h2>
+            <p class="lead">Den brukes bare til å sette opp huben din.</p>
+          </div>
+          <div class="field" data-c="sage">
+            <label for="r-name">Navn</label>
+            <input id="r-name" name="name" type="text" autocomplete="name" maxlength="80" placeholder="Fornavn og etternavn">
+          </div>
+          <div class="field" data-c="sage">
+            <label for="r-email">E-post</label>
+            <input id="r-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="navn@eksempel.no">
+          </div>
+          <div class="field" data-c="sage">
+            <label for="r-pin">Velg en PIN-kode på 6 sifre</label>
+            <p class="hint" id="r-pin-h">Du bruker den sammen med e-posten når du logger inn igjen.</p>
+            <div class="pin-wrap">
+              <input id="r-pin" name="pin" class="pin" type="password" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{6}" aria-describedby="r-pin-h" placeholder="••••••">
+              <button type="button" class="pin-toggle" data-pin-toggle="regForm" aria-pressed="false">Vis</button>
+            </div>
+          </div>
+          <div class="field" data-c="sage">
+            <label for="r-pin2">Skriv PIN-koden en gang til</label>
+            <div class="pin-wrap">
+              <input id="r-pin2" name="pin2" class="pin" type="password" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{6}" placeholder="••••••">
+            </div>
+          </div>
+          <p class="notice"><span data-icon="key"></span><span><strong>Skriv ned PIN-koden.</strong> Den kan ikke gjenopprettes. Glemmer du den, sletter vi profilen, og du kan lage en ny.</span></p>
+          <label class="check" for="r-consent"><input type="checkbox" id="r-consent" name="consent"><span>Jeg forstår at svarene mine lagres for å sette opp huben min, og at profilen slettes når svarene er hentet ut.</span></label>
+          <p class="form-err" role="alert"></p>
+          <button type="submit" class="btn-pri">Lag profil og begynn<span data-icon="arrowR" class="go-wrap"></span></button>
+          <p class="auth-foot">Det opprettes ingen konto. Du kan slette profilen selv når som helst.</p>
+        </form>
+
+        <form id="loginForm" novalidate hidden>
+          <div>
+            <h2>Velkommen tilbake</h2>
+            <p class="lead">Logg inn med e-posten og PIN-koden du valgte.</p>
+          </div>
+          <div class="field" data-c="sage">
+            <label for="l-email">E-post</label>
+            <input id="l-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="navn@eksempel.no">
+          </div>
+          <div class="field" data-c="sage">
+            <label for="l-pin">PIN-kode</label>
+            <div class="pin-wrap">
+              <input id="l-pin" name="pin" class="pin" type="password" inputmode="numeric" autocomplete="current-password" pattern="[0-9]{6}" placeholder="••••••">
+              <button type="button" class="pin-toggle" data-pin-toggle="loginForm" aria-pressed="false">Vis</button>
+            </div>
+          </div>
+          <p class="form-err" role="alert"></p>
+          <button type="submit" class="btn-pri">Logg inn<span data-icon="arrowR" class="go-wrap"></span></button>
+          <details>
+            <summary>Glemt PIN-koden?</summary>
+            <p>PIN-koden kan ikke gjenopprettes. Skriv til <span data-cfg="contactName">Peder</span> på <span class="sel" data-cfg="contactEmail">peder@artum.no</span>, så slettes den gamle profilen, og du kan lage en ny med samme e-post.</p>
+          </details>
+        </form>
+      </div>
+
+      <svg class="vesica" viewBox="0 0 360 280" aria-hidden="true">
+        <defs>
+          <radialGradient id="lensG" cx="50%" cy="42%" r="62%">
+            <stop offset="0" style="stop-color:var(--gold);stop-opacity:.95"/>
+            <stop offset=".55" style="stop-color:var(--rose);stop-opacity:.7"/>
+            <stop offset="1" style="stop-color:var(--rose);stop-opacity:.15"/>
+          </radialGradient>
+          <clipPath id="clipL"><circle cx="140" cy="140" r="94"><animate attributeName="cx" values="140;152;140" dur="9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/></circle></clipPath>
+        </defs>
+        <g class="spin"><circle cx="180" cy="140" r="132" fill="none" style="stroke:var(--gold)" stroke-width="1.2" stroke-dasharray="1.5 10" stroke-linecap="round"/></g>
+        <circle cx="180" cy="140" r="112" fill="none" style="stroke:var(--border)" stroke-width="1"/>
+        <circle cx="220" cy="140" r="94" style="fill:url(#lensG)" clip-path="url(#clipL)"><animate attributeName="cx" values="220;208;220" dur="9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/></circle>
+        <circle cx="140" cy="140" r="94" fill="none" style="stroke:var(--sage)" stroke-width="1.6"><animate attributeName="cx" values="140;152;140" dur="9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/></circle>
+        <circle cx="220" cy="140" r="94" fill="none" style="stroke:var(--copper)" stroke-width="1.6"><animate attributeName="cx" values="220;208;220" dur="9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/></circle>
+        <circle cx="180" cy="140" r="3.5" style="fill:var(--forest)"><animate attributeName="r" values="3.5;6;3.5" dur="9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/></circle>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Signed in -->
+  <section class="hello in-only">
+    <div class="aura" aria-hidden="true"><span class="orb a"></span><span class="orb b"></span></div>
+    <div class="hello-in g">
+      <p class="eyebrow">Sanctum · Din egen hub</p>
+      <h1><span id="helloWord">Hei</span>, <em id="helloName">deg</em>.</h1>
+      <p class="sub">Svarene lagres mens du skriver. Logg inn igjen med e-post og PIN-kode når du vil fortsette.</p>
+      <p class="state-pill" id="statePill"></p>
+    </div>
+  </section>
+
+  <div class="ws g in-only" id="ws" data-view="form">
+    <div class="form-col" id="formCol">
+      <div id="skjema">
+        <ol class="prog" id="prog" aria-label="Steg i skjemaet"></ol>
+        <p class="legend"><span>Merkene viser hvor svarene havner:</span><span data-vis="pub"></span><span data-vis="opt"></span><span data-vis="cli"></span><span data-vis="priv"></span></p>
+      </div>
+      <article class="step" id="step" data-c="sage"></article>
+      <div class="step-nav">
+        <button type="button" class="btn-sec" id="prev"><span data-icon="arrowL"></span>Tilbake</button>
+        <button type="button" class="btn-pri" id="next"></button>
+      </div>
+    </div>
+
+    <aside class="pv-col" id="pvCol" aria-label="Forhåndsvisning av huben din">
+      <p class="pv-label"><span class="live" aria-hidden="true"></span>Slik kan huben din se ut</p>
+      <div class="phone"><div class="phone-scroll" id="pv"></div></div>
+      <p class="pv-note">En skisse som oppdateres mens du skriver. Farger, bilder og oppsett kan tilpasses etterpå.</p>
+      <button type="button" class="btn-sec only-narrow" data-view="form"><span data-icon="arrowL"></span>Tilbake til spørsmålene</button>
+    </aside>
+  </div>
+
+  <section class="site" id="hjemmeside">
+    <div class="site-in g">
+      <p class="eyebrow">Hjemmeside</p>
+      <h2>Huben din kan være hjemmesiden din</h2>
+      <p class="lede">Alt du ville hatt på en hjemmeside får plass i huben: hvem du er, hva du tilbyr, hvor du er og hvordan folk når deg. Du slipper å bygge og vedlikeholde den selv, og den lever i et nettverk der folk allerede leter etter det du gjør.</p>
+
+      <div class="compare">
+        <div class="cmp plain">
+          <h3>En vanlig hjemmeside</h3>
+          <ul>
+            <li><span data-icon="minus"></span>Du bygger og oppdaterer den selv, eller betaler noen for det</li>
+            <li><span data-icon="minus"></span>Står alene, så folk må finne frem til den</li>
+            <li><span data-icon="minus"></span>Booking, kurs og klientverktøy må kobles på hver for seg</li>
+            <li><span data-icon="minus"></span>Ofte laget for PC først</li>
+          </ul>
+        </div>
+        <div class="cmp hub">
+          <h3>Huben din</h3>
+          <ul>
+            <li><span data-icon="check"></span>Settes opp for deg ut fra svarene dine</li>
+            <li><span data-icon="check"></span>Synlig for andre utøvere, festivaler og folk i nettverket</li>
+            <li><span data-icon="check"></span>Klientrom, kurs og samarbeid kan bygges inn</li>
+            <li><span data-icon="check"></span>Laget for mobilen først, og kan ligge på hjemskjermen som en app</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="sub">Slik kan det henge sammen</h3>
+      <div class="flow" role="img" aria-label="Domenet ditt og lenken i bioen din fører begge til huben din">
+        <div class="node"><span data-icon="globe"></span><b>dittnavn.no</b><small>Domenet ditt, hvis du vil ha et</small></div>
+        <span class="conn" aria-hidden="true"></span>
+        <div class="node hub"><span data-icon="home"></span><b>Huben din</b><small>Profil, tilbud, kurs og klientrom</small></div>
+        <span class="conn l" aria-hidden="true"></span>
+        <div class="node"><span data-icon="link"></span><b>Lenke i bio</b><small>Instagram, visittkort og meldinger</small></div>
+      </div>
+      <p class="flow-note">Folk skriver inn domenet ditt eller trykker på lenken i bioen din, og havner rett i huben.</p>
+
+      <h3 class="sub">Tre måter å gjøre det på</h3>
+      <div class="opts">
+        <div class="opt"><span class="opt-ic"><span data-icon="home"></span></span><h4>Bare huben</h4><p>Alt samlet på ett sted. Del lenken i bioen på Instagram, på visittkort og i meldinger.</p><span class="fee">Klar fra start</span></div>
+        <div class="opt"><span class="opt-ic"><span data-icon="globe"></span></span><h4>Huben med eget domene</h4><p>Du kjøper et domene selv, for eksempel dittnavn.no. Det kobles til huben, så folk som skriver inn navnet ditt havner rett der.</p><span class="fee">Domenet kjøper du selv</span></div>
+        <div class="opt"><span class="opt-ic"><span data-icon="spark"></span></span><h4>Egen nettside i tillegg</h4><p>Vil du ha en helt egen side med eget design, kan den lages for deg. Den lenkes fra profilen din, og domenet kan peke dit i stedet.</p><span class="fee">Mot honorar</span></div>
+      </div>
+      <p class="opt-note">Hva som passer, finner vi ut sammen. Ingenting må bestemmes nå.</p>
+
+      <div class="future">
+        <div class="devs" aria-hidden="true"><span data-icon="phone"></span><span data-icon="xr"></span></div>
+        <p><strong>Laget for skjermene folk bruker nå, og de som kommer.</strong> I dag på mobilen, som en app du åpner fra hjemskjermen. Etter hvert også i AR- og XR-briller, når flere tar dem i bruk.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot g">
+  <span>Sanctum · Din egen hub</span>
+  <span>Spørsmål underveis? Skriv til <span data-cfg="contactName">Peder</span> på <span class="sel" data-cfg="contactEmail">peder@artum.no</span></span>
+</footer>
+</body>
+</html>

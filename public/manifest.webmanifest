@@ -1,0 +1,11 @@
+{
+  "name": "Sanctum Hub Oppstart",
+  "short_name": "Sanctum",
+  "description": "Lag din egen hub i Sanctum: profil, hjemmeside og klientrom i ett.",
+  "lang": "nb",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9f4ee",
+  "theme_color": "#0a4627",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

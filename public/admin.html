@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sanctum Hub Admin</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts/cormorant/500.css">
+<link rel="stylesheet" href="/fonts/cormorant/600.css">
+<link rel="stylesheet" href="/fonts/inter/400.css">
+<link rel="stylesheet" href="/fonts/inter/500.css">
+<link rel="stylesheet" href="/fonts/inter/600.css">
+<link rel="stylesheet" href="/app.css">
+<script src="/shared.js" defer></script>
+<script src="/admin.js" defer></script>
+</head>
+<body data-auth="boot">
+<header class="topbar">
+  <div class="bar g">
+    <a class="logo" href="/admin" aria-label="Sanctum admin">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"/><circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="1" opacity=".5"/><circle cx="20" cy="20" r="6" fill="currentColor" opacity=".8"/><g fill="currentColor" opacity=".6"><path d="M20 2Q25 10 20 14Q15 10 20 2"/><path d="M38 20Q30 25 26 20Q30 15 38 20"/><path d="M20 38Q15 30 20 26Q25 30 20 38"/><path d="M2 20Q10 15 14 20Q10 25 2 20"/></g></svg>
+      <b>Sanctum</b>
+    </a>
+    <span class="bar-sub">Admin</span>
+    <div class="who in-only">
+      <button type="button" class="logout" id="logoutBtn" aria-label="Logg ut"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4M6 12h10"/></svg><span class="t">Logg ut</span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="g out-only">
+    <div class="auth adm-login">
+      <div>
+        <h2>Admin</h2>
+        <p class="lead">Logg inn med admin-nøkkelen (ADMIN_KEY) for å se, laste ned og slette profiler.</p>
+      </div>
+      <form id="keyForm" novalidate data-c="forest">
+        <div class="field">
+          <label for="a-key">Admin-nøkkel</label>
+          <input id="a-key" name="key" type="password" autocomplete="current-password">
+        </div>
+        <p class="form-err" role="alert" id="loginErr"></p>
+        <button type="submit" class="btn-pri">Logg inn</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="adm g in-only" data-c="forest">
+    <section>
+      <div class="adm-head">
+        <h1>Profiler</h1>
+        <div class="adm-tools">
+          <a class="btn-sec" href="/api/admin/export" id="exportAll">Last ned alle (JSON)</a>
+        </div>
+      </div>
+      <p class="adm-note" id="countNote"></p>
+      <p class="adm-note warn" id="storeNote" hidden>Lagring: fil. Legg til PostgreSQL i Replit før du deler lenken, ellers kan svarene forsvinne når appen publiseres eller starter på nytt.</p>
+      <div class="field" style="margin-top:14px">
+        <label class="sr" for="search">Søk</label>
+        <input id="search" type="text" placeholder="Søk på navn eller e-post" autocomplete="off">
+      </div>
+      <div class="adm-list" id="list"></div>
+    </section>
+    <section class="adm-detail" id="detail" aria-live="polite">
+      <p class="adm-empty">Velg en profil for å se svarene.</p>
+    </section>
+  </div>
+</main>
+</body>
+</html>

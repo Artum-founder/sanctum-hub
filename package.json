@@ -1,0 +1,19 @@
+{
+  "name": "sanctum-hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sanctum hub-oppstart: onboarding for tantra-coacher med midlertidige profiler (navn, e-post og PIN-kode).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.0.0",
+    "@fontsource/inter": "^5.0.0",
+    "pg": "^8.11.0"
+  }
+}
