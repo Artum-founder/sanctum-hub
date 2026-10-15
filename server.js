@@ -3,7 +3,7 @@
  * Sanctum hub-oppstart
  * Temporary profiles (name, e-mail, 6-digit PIN) for practitioners filling in their hub onboarding.
  * No accounts, no PIN recovery. The admin exports the answers and deletes the profile.
- * Only Node built-ins, plus `pg` when DATABASE_URL is set.
+ * Only Node built-ins, plus `pg` when a database address (SOL_DATABASE_URL or DATABASE_URL) is set.
  */
 const http = require('http');
 const fs = require('fs');
@@ -404,7 +404,7 @@ const server = http.createServer(async (req, res) => {
 (async () => {
   await store.init();
   if (store.kind === 'file' && process.env.REPLIT_DEPLOYMENT) {
-    console.warn('[sanctum-hub] DATABASE_URL mangler: svarene lagres i en fil som kan forsvinne. Legg til PostgreSQL i Replit.');
+    console.warn('[sanctum-hub] Databaseadresse mangler (SOL_DATABASE_URL): svarene lagres i en fil som kan forsvinne.');
   }
   if (!ADMIN_KEY) console.warn('[sanctum-hub] ADMIN_KEY er ikke satt: /admin er av.');
   setInterval(() => store.purgeExpiredSessions().catch(() => {}), 60 * 60 * 1000).unref();

@@ -18,18 +18,22 @@ Svarene lagres i Supabase-prosjektet **sol**, i en egen avdeling (schema) som he
 
 ## Kjøre på Replit
 
-1. **Importer**: Create App, Import from GitHub, og velg `sanctum-hub`.
-2. **Secrets** (Tools, Secrets):
-   - `DATABASE_URL`: tilkoblingsadressen til «sol». I Supabase: åpne prosjektet sol, trykk **Connect**, velg **Session pooler** og kopier adressen (URI). Bytt ut `[YOUR-PASSWORD]` med databasepassordet. Bruk Session pooler, ikke Direct connection, fordi den direkte adressen ikke virker fra Replit.
-   - `DATABASE_SSL`: `no-verify`. Supabase bruker sitt eget sertifikat, så uten denne nekter tilkoblingen. Forbindelsen er fortsatt kryptert.
-     Vil du at sertifikatet også skal sjekkes (bedre): last ned sertifikatet i Supabase under Database settings, SSL Configuration, og lim inn hele innholdet som `DATABASE_CA` i stedet for `DATABASE_SSL`.
-   - `ADMIN_KEY`: en lang, tilfeldig nøkkel. Den bruker du for å logge inn på `/admin`.
-   - `CONTACT_NAME` og `CONTACT_EMAIL` (valgfritt): navnet og e-posten som vises i skjemaet. Standard er Peder og peder@artum.no.
-   - `DB_SCHEMA` (valgfritt): standard er `sanctum_hub`.
-3. **Run**. I konsollen skal det stå `lagring: postgres`. Åpne gjerne appen i en egen fane. Innlogging i Replits forhåndsvisning kan bli blokkert i noen nettlesere (Safari blokkerer informasjonskapsler i innebygde vinduer).
-4. **Publish** (Autoscale) når du vil dele lenken.
+Koden lages i GitHub, og Replit er basen nettsiden kjører fra.
 
-Uten `DATABASE_URL` lagres svarene i en fil, og den kan forsvinne når appen publiseres eller starter på nytt. Admin-siden viser en advarsel så lenge det er sånn. Replits egen PostgreSQL virker også: legg den til under Database i stedet for å sette `DATABASE_URL` selv.
+1. **Databaseadressen til «sol»** (gjøres én gang, og kan brukes av alle SOL-apper):
+   I Supabase: åpne prosjektet sol, trykk **Connect**, velg fanen **Direct** (Connection string), Type **URI** og Method **Session pooler**. Kopier adressen og bytt ut `[YOUR-PASSWORD]` med databasepassordet. Bruk Session pooler, ikke Direct connection, fordi den direkte adressen ikke virker fra Replit.
+   Lagre den i Replit som en **Account secret** med navnet `SOL_DATABASE_URL`. Da kan hver SOL-app koble den til med et klikk, i stedet for at du limer den inn i hver app.
+2. **Importer**: Create App, Import from GitHub, og velg `sanctum-hub`.
+3. **Secrets i appen** (Tools, Secrets):
+   - Koble til account-secreten `SOL_DATABASE_URL`. (Eller lim inn adressen som `DATABASE_URL` direkte i appen.)
+   - `ADMIN_KEY`: en lang, tilfeldig nøkkel. Den bruker du for å logge inn på `/admin`.
+   - Valgfritt: `CONTACT_NAME` og `CONTACT_EMAIL` (navnet og e-posten som vises i skjemaet, standard er Peder og peder@artum.no), og `DB_SCHEMA` (standard `sanctum_hub`).
+4. **Run**. I konsollen skal det stå `lagring: postgres`. Åpne gjerne appen i en egen fane. Innlogging i Replits forhåndsvisning kan bli blokkert i noen nettlesere (Safari blokkerer informasjonskapsler i innebygde vinduer).
+5. **Publish** (Autoscale) når du vil dele lenken.
+
+Om sertifikatet: Supabase bruker sitt eget sertifikat. Når adressen er en Supabase-adresse, krypterer appen forbindelsen uten å sjekke sertifikatet. Vil du at det også skal sjekkes, last ned sertifikatet i Supabase under Database settings, SSL Configuration, og lim inn hele innholdet som `DATABASE_CA`. `DATABASE_SSL` (`require` eller `no-verify`) overstyrer dette.
+
+Uten databaseadresse lagres svarene i en fil, og den kan forsvinne når appen publiseres eller starter på nytt. Admin-siden viser en advarsel så lenge det er sånn.
 
 ## Kjøre lokalt
 
@@ -38,7 +42,7 @@ npm install
 ADMIN_KEY=en-lang-nokkel npm start
 ```
 
-Åpne http://localhost:3000. Uten `DATABASE_URL` lagres alt i `data/sanctum-hub.json`.
+Åpne http://localhost:3000. Uten databaseadresse lagres alt i `data/sanctum-hub.json`.
 
 ## Personvern og sikkerhet
 
@@ -53,7 +57,7 @@ ADMIN_KEY=en-lang-nokkel npm start
 
 ```
 server.js           HTTP-server og API (bare innebygde Node-moduler, pluss pg)
-src/store.js        Lagring: PostgreSQL med DATABASE_URL (schema sanctum_hub), ellers en JSON-fil
+src/store.js        Lagring: PostgreSQL med SOL_DATABASE_URL eller DATABASE_URL (schema sanctum_hub), ellers en JSON-fil
 src/security.js     PIN-hashing, økter og begrensning av forsøk
 public/index.html   Skjemaet
 public/app.js       Skjemaets logikk og forhåndsvisningen

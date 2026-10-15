@@ -197,13 +197,17 @@ function rowToUser(r) {
   };
 }
 
-// Connection settings. Supabase's pooler uses its own certificate authority, so either paste the
-// certificate from the Supabase dashboard into DATABASE_CA (verified), or set DATABASE_SSL=no-verify
-// (encrypted, not verified). Either way sslmode is taken out of the URL so these settings apply.
+// Connection settings. Supabase's pooler uses its own certificate authority. For a Supabase address
+// the connection is encrypted without checking the certificate, unless the certificate from the
+// Supabase dashboard is given in DATABASE_CA (then it is checked). DATABASE_SSL overrides this.
+// Either way sslmode is taken out of the URL so these settings apply.
 function pgConfig(url) {
   const cfg = { connectionString: url, max: 5, idleTimeoutMillis: 30000, connectionTimeoutMillis: 10000 };
   const ca = (process.env.DATABASE_CA || '').trim();
-  const mode = (process.env.DATABASE_SSL || '').trim().toLowerCase();
+  let mode = (process.env.DATABASE_SSL || '').trim().toLowerCase();
+  if (!ca && !mode) {
+    try { if (/\.supabase\.(co|com)$/i.test(new URL(url).hostname)) mode = 'no-verify'; } catch (e) { /* not a URL */ }
+  }
   if (ca || mode === 'no-verify' || mode === 'require') {
     try {
       const u = new URL(url);
@@ -326,8 +330,15 @@ class PgStore {
   }
 }
 
+// SOL_DATABASE_URL is the shared address to Supabase «sol». Keep it as a Replit account secret and
+// link it to each SOL app; it wins over DATABASE_URL, which Replit's own database may set.
+function databaseUrl() {
+  return (process.env.SOL_DATABASE_URL || process.env.DATABASE_URL || '').trim();
+}
+
 function createStore() {
-  if (process.env.DATABASE_URL) return new PgStore(process.env.DATABASE_URL);
+  const url = databaseUrl();
+  if (url) return new PgStore(url);
   const file = process.env.DATA_FILE || path.join(__dirname, '..', 'data', 'sanctum-hub.json');
   return new FileStore(file);
 }
