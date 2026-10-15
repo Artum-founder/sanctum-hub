@@ -8,16 +8,28 @@ Onboarding for coacher og utøvere som skal få sin egen hub i Sanctum. De lager
 - Forhåndsvisning av huben som oppdateres mens de skriver.
 - Admin på `/admin`: se alle profiler, last ned (JSON), kopier som tekst, slett.
 
+## Database: Supabase «sol»
+
+Svarene lagres i Supabase-prosjektet **sol**, i en egen avdeling (schema) som heter `sanctum_hub`. Den ligger ved siden av `tantric` (Sanctum-appen), `openground` og `selvskaper`, men er helt adskilt fra dem.
+
+- Tabellene `sanctum_hub.hub_users` og `sanctum_hub.hub_sessions` er allerede laget. Appen lager dem også selv hvis de mangler.
+- Row level security er på uten regler, og Supabase-rollene `anon` og `authenticated` har ingen tilgang. Svarene kan altså ikke leses gjennom Supabase sitt offentlige API, bare gjennom denne serveren.
+- Svarene ser du i Supabase under Table Editor, schema `sanctum_hub`, eller på `/admin` i appen.
+
 ## Kjøre på Replit
 
 1. **Importer**: Create App, Import from GitHub, og velg `sanctum-hub`.
-2. **Database**: legg til PostgreSQL i appen (Database-fanen). Det gir `DATABASE_URL`, og tabellene lages automatisk ved oppstart.
-   Uten database lagres svarene i en fil, og den kan forsvinne når appen publiseres eller starter på nytt. Admin-siden viser en advarsel så lenge det er sånn.
-3. **Secrets**:
+2. **Secrets** (Tools, Secrets):
+   - `DATABASE_URL`: tilkoblingsadressen til «sol». I Supabase: åpne prosjektet sol, trykk **Connect**, velg **Session pooler** og kopier adressen (URI). Bytt ut `[YOUR-PASSWORD]` med databasepassordet. Bruk Session pooler, ikke Direct connection, fordi den direkte adressen ikke virker fra Replit.
+   - `DATABASE_SSL`: `no-verify`. Supabase bruker sitt eget sertifikat, så uten denne nekter tilkoblingen. Forbindelsen er fortsatt kryptert.
+     Vil du at sertifikatet også skal sjekkes (bedre): last ned sertifikatet i Supabase under Database settings, SSL Configuration, og lim inn hele innholdet som `DATABASE_CA` i stedet for `DATABASE_SSL`.
    - `ADMIN_KEY`: en lang, tilfeldig nøkkel. Den bruker du for å logge inn på `/admin`.
    - `CONTACT_NAME` og `CONTACT_EMAIL` (valgfritt): navnet og e-posten som vises i skjemaet. Standard er Peder og peder@artum.no.
-4. **Run**. Åpne gjerne appen i en egen fane. Innlogging i Replits forhåndsvisning kan bli blokkert i noen nettlesere (Safari blokkerer informasjonskapsler i innebygde vinduer).
-5. **Publish** (Autoscale) når du vil dele lenken.
+   - `DB_SCHEMA` (valgfritt): standard er `sanctum_hub`.
+3. **Run**. I konsollen skal det stå `lagring: postgres`. Åpne gjerne appen i en egen fane. Innlogging i Replits forhåndsvisning kan bli blokkert i noen nettlesere (Safari blokkerer informasjonskapsler i innebygde vinduer).
+4. **Publish** (Autoscale) når du vil dele lenken.
+
+Uten `DATABASE_URL` lagres svarene i en fil, og den kan forsvinne når appen publiseres eller starter på nytt. Admin-siden viser en advarsel så lenge det er sånn. Replits egen PostgreSQL virker også: legg den til under Database i stedet for å sette `DATABASE_URL` selv.
 
 ## Kjøre lokalt
 
@@ -41,7 +53,7 @@ ADMIN_KEY=en-lang-nokkel npm start
 
 ```
 server.js           HTTP-server og API (bare innebygde Node-moduler, pluss pg)
-src/store.js        Lagring: PostgreSQL med DATABASE_URL, ellers en JSON-fil
+src/store.js        Lagring: PostgreSQL med DATABASE_URL (schema sanctum_hub), ellers en JSON-fil
 src/security.js     PIN-hashing, økter og begrensning av forsøk
 public/index.html   Skjemaet
 public/app.js       Skjemaets logikk og forhåndsvisningen
