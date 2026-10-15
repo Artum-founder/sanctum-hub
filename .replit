@@ -1,9 +1,9 @@
-modules = ["nodejs-20"]
+modules = ["nodejs-18", "web"]
 run = "npm start"
 entrypoint = "server.js"
 
 [nix]
-channel = "stable-24_05"
+channel = "stable-25_05"
 
 [deployment]
 build = ["npm", "install", "--omit=dev"]
